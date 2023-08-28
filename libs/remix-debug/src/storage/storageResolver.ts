@@ -1,11 +1,11 @@
 'use strict'
-import { isContractCreation } from '../trace/traceHelper'
-import { decodeMappingsKeys } from './mappingPreimages'
+import {isContractCreation} from '../trace/traceHelper'
+import {decodeMappingsKeys} from './mappingPreimages'
 
 /**
-  * Basically one instance is created for one debugging session.
-  * (TODO: one instance need to be shared over all the components)
-  */
+ * Basically one instance is created for one debugging session.
+ * (TODO: one instance need to be shared over all the components)
+ */
 export class StorageResolver {
   storageByAddress
   preimagesMappingByAddress
@@ -13,12 +13,13 @@ export class StorageResolver {
   web3
   zeroSlot
 
-  constructor (options) {
+  constructor(options) {
     this.storageByAddress = {}
     this.preimagesMappingByAddress = {}
     this.maxSize = 100
     this.web3 = options.web3
-    this.zeroSlot = '0x0000000000000000000000000000000000000000000000000000000000000000'
+    this.zeroSlot =
+      '0x0000000000000000000000000000000000000000000000000000000000000000'
   }
 
   /**
@@ -30,8 +31,14 @@ export class StorageResolver {
    * @param {String} - address - lookup address
    * @param {Function} - callback - contains a map: [hashedKey] = {key, hashedKey, value}
    */
-  storageRange (tx, stepIndex, address) {
-    return this.storageRangeInternal(this, this.zeroSlot, tx, stepIndex, address)
+  storageRange(tx, stepIndex, address) {
+    return this.storageRangeInternal(
+      this,
+      this.zeroSlot,
+      tx,
+      stepIndex,
+      address
+    )
   }
 
   /**
@@ -44,7 +51,7 @@ export class StorageResolver {
    * @param {Array} corrections - used in case the calculated sha3 has been modifyed before SSTORE (notably used for struct in mapping).
    * @return {Function} - callback
    */
-  async initialPreimagesMappings (tx, stepIndex, address, corrections) {
+  async initialPreimagesMappings(tx, stepIndex, address, corrections) {
     if (this.preimagesMappingByAddress[address]) {
       return this.preimagesMappingByAddress[address]
     }
@@ -63,9 +70,15 @@ export class StorageResolver {
    * @param {String} - address - lookup address
    * @param {Function} - callback - {key, hashedKey, value} -
    */
-  async storageSlot (slot, tx, stepIndex, address) {
-    const storage = await this.storageRangeInternal(this, slot, tx, stepIndex, address)
-    return (storage[slot] !== undefined ? storage[slot] : null)
+  async storageSlot(slot, tx, stepIndex, address) {
+    const storage = await this.storageRangeInternal(
+      this,
+      slot,
+      tx,
+      stepIndex,
+      address
+    )
+    return storage[slot] !== undefined ? storage[slot] : null
   }
 
   /**
@@ -74,8 +87,10 @@ export class StorageResolver {
    * @param {String} address  - contract address
    * @return {Bool} - return True if the storage at @arg address is complete
    */
-  isComplete (address) {
-    return this.storageByAddress[address] && this.storageByAddress[address].complete
+  isComplete(address) {
+    return (
+      this.storageByAddress[address] && this.storageByAddress[address].complete
+    )
   }
 
   /**
@@ -84,18 +99,26 @@ export class StorageResolver {
    *   even if the next 1000 items are not in the cache.
    * - If @arg slot is not cached, the corresponding value will be resolved and the next 1000 slots.
    */
-  async storageRangeInternal (self, slotKey, tx, stepIndex, address) {
+  async storageRangeInternal(self, slotKey, tx, stepIndex, address) {
     const cached = this.fromCache(self, address)
-    if (cached && cached.storage[slotKey]) { // we have the current slot in the cache and maybe the next 1000...
+    if (cached && cached.storage[slotKey]) {
+      // we have the current slot in the cache and maybe the next 1000...
       return cached.storage
     }
-    const result = await this.storageRangeWeb3Call(tx, address, slotKey, self.maxSize)
+    const result = await this.storageRangeWeb3Call(
+      tx,
+      address,
+      slotKey,
+      self.maxSize
+    )
     const [storage, nextKey] = result
-    if (!storage[slotKey] && slotKey !== self.zeroSlot) { // we don't cache the zero slot (could lead to inconsistency)
-      storage[slotKey] = { key: slotKey, value: self.zeroSlot }
+    if (!storage[slotKey] && slotKey !== self.zeroSlot) {
+      // we don't cache the zero slot (could lead to inconsistency)
+      storage[slotKey] = {key: slotKey, value: self.zeroSlot}
     }
     self.toCache(self, address, storage)
-    if (slotKey === self.zeroSlot && !nextKey) { // only working if keys are sorted !!
+    if (slotKey === self.zeroSlot && !nextKey) {
+      // only working if keys are sorted !!
       self.storageByAddress[address].complete = true
     }
     return storage
@@ -107,7 +130,7 @@ export class StorageResolver {
    * @param {String} address  - contract address
    * @return {String} - either the entire known storage or a single value
    */
-  fromCache (self, address) {
+  fromCache(self, address) {
     if (!self.storageByAddress[address]) {
       return null
     }
@@ -120,20 +143,23 @@ export class StorageResolver {
    * @param {String} address  - contract address
    * @param {Object} storage  - result of `storageRangeAtInternal`, contains {key, hashedKey, value}
    */
-  toCache (self, address, storage) {
+  toCache(self, address, storage) {
     if (!self.storageByAddress[address]) {
       self.storageByAddress[address] = {}
     }
-    self.storageByAddress[address].storage = Object.assign(self.storageByAddress[address].storage || {}, storage)
+    self.storageByAddress[address].storage = Object.assign(
+      self.storageByAddress[address].storage || {},
+      storage
+    )
   }
 
-  storageRangeWeb3Call (tx, address, start, maxSize): Promise<Array<unknown>> {
+  storageRangeWeb3Call(tx, address, start, maxSize): Promise<Array<unknown>> {
     return new Promise((resolve, reject) => {
       if (isContractCreation(address)) {
         resolve([{}, null])
       } else {
-        this.web3.debug.storageRangeAt(
-          tx.blockHash, tx.transactionIndex,
+        this.web3.debug.storageRangeAt2(
+          tx.hash,
           address,
           start,
           maxSize,
@@ -145,7 +171,8 @@ export class StorageResolver {
             } else {
               reject(new Error('the storage has not been provided'))
             }
-          })
+          }
+        )
       }
     })
   }

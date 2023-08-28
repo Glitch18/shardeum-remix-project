@@ -1,15 +1,21 @@
 'use strict'
-import { init } from '../init'
+import {init} from '../init'
 const web3Override: Record<string, Record<string, unknown>> = {}
 web3Override.eth = {}
 web3Override.debug = {}
-let data = init.readFile(require('path').resolve(__dirname, 'testWeb3.json'), null)
+let data = init.readFile(
+  require('path').resolve(__dirname, 'testWeb3.json'),
+  null
+)
 data = JSON.parse(data)
 
-let traceWithABIEncoder = init.readFile(require('path').resolve(__dirname, 'traceWithABIEncoder.json'), null)
-traceWithABIEncoder = 
-
-data.testTraces['0x20ef65b8b186ca942fcccd634f37074dde49b541c27994fc7596740ef44cfd53'] = JSON.parse(traceWithABIEncoder)
+let traceWithABIEncoder = init.readFile(
+  require('path').resolve(__dirname, 'traceWithABIEncoder.json'),
+  null
+)
+traceWithABIEncoder = data.testTraces[
+  '0x20ef65b8b186ca942fcccd634f37074dde49b541c27994fc7596740ef44cfd53'
+] = JSON.parse(traceWithABIEncoder)
 web3Override.eth.getCode = function (address, callback) {
   if (callback) {
     callback(null, data.testCodes[address])
@@ -22,8 +28,14 @@ web3Override.debug.traceTransaction = function (txHash, options, callback) {
   callback(null, data.testTraces[txHash])
 }
 
-web3Override.debug.storageRangeAt = function (blockNumber, txIndex, address, start, maxSize, callback) {
-  callback(null, { storage: {}, complete: true })
+web3Override.debug.storageRangeAt2 = function (
+  txHash,
+  address,
+  start,
+  maxSize,
+  callback
+) {
+  callback(null, {storage: {}, complete: true})
 }
 
 web3Override.eth.getTransaction = function (txHash, callback) {
@@ -34,7 +46,11 @@ web3Override.eth.getTransaction = function (txHash, callback) {
   }
 }
 
-web3Override.eth.getTransactionFromBlock = function (blockNumber, txIndex, callback) {
+web3Override.eth.getTransactionFromBlock = function (
+  blockNumber,
+  txIndex,
+  callback
+) {
   if (callback) {
     callback(null, data.testTxsByBlock[blockNumber + '-' + txIndex])
   } else {
@@ -42,14 +58,16 @@ web3Override.eth.getTransactionFromBlock = function (blockNumber, txIndex, callb
   }
 }
 
-web3Override.eth.getBlockNumber = function (callback) { callback('web3 modified testing purposes :)') }
+web3Override.eth.getBlockNumber = function (callback) {
+  callback('web3 modified testing purposes :)')
+}
 
 web3Override.eth.setProvider = function (provider) {}
 
-web3Override.eth.providers = { 'HttpProvider': function (url) {} }
+web3Override.eth.providers = {HttpProvider: function (url) {}}
 
-web3Override.eth.currentProvider = {'host': 'test provider'}
+web3Override.eth.currentProvider = {host: 'test provider'}
 
-if (typeof (module) !== 'undefined' && typeof (module.exports) !== 'undefined') {
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
   module.exports = web3Override
 }
